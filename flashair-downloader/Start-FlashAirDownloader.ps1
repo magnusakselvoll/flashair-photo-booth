@@ -10,9 +10,7 @@ param(
     [Parameter(Mandatory=$false)]
     [timespan]$MaximumExecutionTime = (New-TimeSpan -Hours 24),
     [Parameter(Mandatory=$false)]
-    [Switch]$DeleteFromSource = $false,
-    [Parameter(Mandatory=$false)]
-    [timespan]$DeleteDelay = (New-TimeSpan -Seconds 0)
+    [Switch]$DeleteFromSource = $false
 )
 
 $stopwatch =  [system.diagnostics.stopwatch]::StartNew()
@@ -41,13 +39,8 @@ while ($stopwatch.Elapsed -lt $MaximumExecutionTime)
         $remoteFile | Copy-Item -Destination $Destination
 
         if ($DeleteFromSource)
-        {
-            $deleteObject = New-Object -TypeName psobject -Property `
-                (@{
-                    'SourceFile'=$remoteFile;
-                    'TimeStamp'=Get-Date
-                })
-            $filesToDelete.Enqueue($deleteObject)
+        {            
+            $filesToDelete.Enqueue($remoteFile.Name)
         }
 
         $completedFiles[$remoteFile.Name] = $true
@@ -55,13 +48,32 @@ while ($stopwatch.Elapsed -lt $MaximumExecutionTime)
 
     if ($DeleteFromSource)
     {
-        $deleteCutoffTimeStamp = (Get-Date).Subtract($DeleteDelay)
-        
-        while ($filesToDelete.Count -gt 0 -and $filesToDelete.Peek().TimeStamp -lt $deleteCutoffTimeStamp)
+        while ($filesToDelete.Count -gt 0)
         {
-            $deleteObject = $filesToDelete.Dequeue()
-            $filesToDelete.SourceFile | Remove-Item
-            Write-Host "Deleted file '$($filesToDelete.SourceFile.Name)'"
+            $fileName = $filesToDelete.Dequeue()
+            $sourceFilePath = Join-Path $Source $fileName
+            if (-not (Test-Path $sourceFilePath))
+            {
+                Write-Warning "Unable to delete '$sourceFilePath'. File does not exist."
+                continue
+            }
+            $destinationFilePath = Join-Path $Destination $fileName
+            if (-not (Test-Path $destinationFilePath))
+            {
+                Write-Warning "Won't delete '$sourceFilePath'. File does not exist on destination."
+                continue
+            }
+            $sourceFile = Get-Item $sourceFilePath
+            $destinationFile = Get-Item $destinationFilePath
+
+            if ($sourceFile.Length -ne $destinationFile.Length)
+            {
+                Write-Warning "'$sourceFilePath' and '$destinationFilePath' have different length. Repeating copy."
+                $completedFiles.Remove($fileName)
+                continue
+            }
+            $sourceFile.Delete()
+            Write-Host "Deleted file '$sourceFilePath'"
         }
     }
 
@@ -69,4 +81,3 @@ while ($stopwatch.Elapsed -lt $MaximumExecutionTime)
     Write-Host ''
     Start-Sleep -Seconds $secondsToSleep
 }
-

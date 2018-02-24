@@ -99,7 +99,7 @@
             this._startButton.Location = new System.Drawing.Point(140, 122);
             this._startButton.Name = "_startButton";
             this._startButton.Size = new System.Drawing.Size(186, 49);
-            this._startButton.TabIndex = 7;
+            this._startButton.TabIndex = 9;
             this._startButton.Text = "Start slideshow";
             this._startButton.UseVisualStyleBackColor = true;
             this._startButton.Click += new System.EventHandler(this._startButton_Click);
@@ -109,14 +109,14 @@
             this._minimumDisplayTime.Location = new System.Drawing.Point(140, 38);
             this._minimumDisplayTime.Name = "_minimumDisplayTime";
             this._minimumDisplayTime.Size = new System.Drawing.Size(46, 20);
-            this._minimumDisplayTime.TabIndex = 8;
+            this._minimumDisplayTime.TabIndex = 4;
             // 
             // _maximumDisplayTime
             // 
             this._maximumDisplayTime.Location = new System.Drawing.Point(140, 64);
             this._maximumDisplayTime.Name = "_maximumDisplayTime";
             this._maximumDisplayTime.Size = new System.Drawing.Size(46, 20);
-            this._maximumDisplayTime.TabIndex = 9;
+            this._maximumDisplayTime.TabIndex = 6;
             // 
             // _showFilenames
             // 
@@ -124,7 +124,7 @@
             this._showFilenames.Location = new System.Drawing.Point(140, 91);
             this._showFilenames.Name = "_showFilenames";
             this._showFilenames.Size = new System.Drawing.Size(15, 14);
-            this._showFilenames.TabIndex = 10;
+            this._showFilenames.TabIndex = 8;
             this._showFilenames.UseVisualStyleBackColor = true;
             // 
             // label4
@@ -133,7 +133,7 @@
             this.label4.Location = new System.Drawing.Point(12, 91);
             this.label4.Name = "label4";
             this.label4.Size = new System.Drawing.Size(81, 13);
-            this.label4.TabIndex = 11;
+            this.label4.TabIndex = 7;
             this.label4.Text = "Show filenames";
             // 
             // label5
@@ -142,7 +142,7 @@
             this.label5.Location = new System.Drawing.Point(140, 178);
             this.label5.Name = "label5";
             this.label5.Size = new System.Drawing.Size(274, 13);
-            this.label5.TabIndex = 12;
+            this.label5.TabIndex = 10;
             this.label5.Text = "Tip: Press the ESC key or ALT+F4 to stop the slideshow.";
             // 
             // MainForm

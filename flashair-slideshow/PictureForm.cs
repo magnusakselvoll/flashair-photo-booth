@@ -49,6 +49,8 @@ namespace flashair_slideshow
 
             Task = null;
             CancellationTokenSource = null;
+
+            Cursor.Show();
         }
     }
 }

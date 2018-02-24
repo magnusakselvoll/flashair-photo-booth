@@ -70,5 +70,37 @@ namespace flashair_slideshow.Properties {
                 this["ShowFileNames"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute(@"<?xml version=""1.0"" encoding=""utf-16""?>
+<ArrayOfString xmlns:xsi=""http://www.w3.org/2001/XMLSchema-instance"" xmlns:xsd=""http://www.w3.org/2001/XMLSchema"">
+  <string>.jpg</string>
+  <string>.jpeg</string>
+  <string>.png</string>
+  <string>.tif</string>
+  <string>.tiff</string>
+  <string>.gif</string>
+</ArrayOfString>")]
+        public global::System.Collections.Specialized.StringCollection FilenameExtensions {
+            get {
+                return ((global::System.Collections.Specialized.StringCollection)(this["FilenameExtensions"]));
+            }
+            set {
+                this["FilenameExtensions"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool Recursive {
+            get {
+                return ((bool)(this["Recursive"]));
+            }
+            set {
+                this["Recursive"] = value;
+            }
+        }
     }
 }

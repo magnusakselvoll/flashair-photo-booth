@@ -39,6 +39,7 @@
             this._maximumDisplayTime = new System.Windows.Forms.NumericUpDown();
             this._showFilenames = new System.Windows.Forms.CheckBox();
             this.label4 = new System.Windows.Forms.Label();
+            this.label5 = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this._minimumDisplayTime)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this._maximumDisplayTime)).BeginInit();
             this.SuspendLayout();
@@ -58,13 +59,13 @@
             | System.Windows.Forms.AnchorStyles.Right)));
             this._pictureFolder.Location = new System.Drawing.Point(140, 12);
             this._pictureFolder.Name = "_pictureFolder";
-            this._pictureFolder.Size = new System.Drawing.Size(211, 20);
+            this._pictureFolder.Size = new System.Drawing.Size(186, 20);
             this._pictureFolder.TabIndex = 1;
             // 
             // _browseButton
             // 
             this._browseButton.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this._browseButton.Location = new System.Drawing.Point(357, 10);
+            this._browseButton.Location = new System.Drawing.Point(332, 10);
             this._browseButton.Name = "_browseButton";
             this._browseButton.Size = new System.Drawing.Size(75, 23);
             this._browseButton.TabIndex = 2;
@@ -97,7 +98,7 @@
             this._startButton.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this._startButton.Location = new System.Drawing.Point(140, 122);
             this._startButton.Name = "_startButton";
-            this._startButton.Size = new System.Drawing.Size(211, 49);
+            this._startButton.Size = new System.Drawing.Size(186, 49);
             this._startButton.TabIndex = 7;
             this._startButton.Text = "Start slideshow";
             this._startButton.UseVisualStyleBackColor = true;
@@ -135,11 +136,21 @@
             this.label4.TabIndex = 11;
             this.label4.Text = "Show filenames";
             // 
+            // label5
+            // 
+            this.label5.AutoSize = true;
+            this.label5.Location = new System.Drawing.Point(140, 178);
+            this.label5.Name = "label5";
+            this.label5.Size = new System.Drawing.Size(274, 13);
+            this.label5.TabIndex = 12;
+            this.label5.Text = "Tip: Press the ESC key or ALT+F4 to stop the slideshow.";
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(444, 194);
+            this.ClientSize = new System.Drawing.Size(419, 204);
+            this.Controls.Add(this.label5);
             this.Controls.Add(this.label4);
             this.Controls.Add(this._showFilenames);
             this.Controls.Add(this._maximumDisplayTime);
@@ -150,7 +161,7 @@
             this.Controls.Add(this._browseButton);
             this.Controls.Add(this._pictureFolder);
             this.Controls.Add(this.label1);
-            this.MinimumSize = new System.Drawing.Size(389, 233);
+            this.MinimumSize = new System.Drawing.Size(435, 243);
             this.Name = "MainForm";
             this.Text = "flashair-slideshow";
             this.Load += new System.EventHandler(this.MainForm_Load);
@@ -173,6 +184,7 @@
         private System.Windows.Forms.NumericUpDown _maximumDisplayTime;
         private System.Windows.Forms.CheckBox _showFilenames;
         private System.Windows.Forms.Label label4;
+        private System.Windows.Forms.Label label5;
     }
 }
 

@@ -48,17 +48,8 @@ namespace flashair_slideshow
 
         private void StartSlideshow()
         {
-            var form = new Form
-            {
-                Text = "Image viewer",
-                WindowState = FormWindowState.Maximized,
-                ControlBox = false,
-                FormBorderStyle = FormBorderStyle.None,
-                BackColor = Color.Black
-            };
-
-            var control = new SlideshowControl(Settings.Default, form);
-            control.Start();
+            var form = new PictureForm(Settings.Default);
+            form.ShowDialog();
         }
 
         private void LoadSettings()

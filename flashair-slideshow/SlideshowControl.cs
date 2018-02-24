@@ -3,7 +3,6 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Threading;
-using System.Windows.Forms;
 using flashair_slideshow.Properties;
 
 namespace flashair_slideshow
@@ -11,39 +10,35 @@ namespace flashair_slideshow
     internal sealed class SlideshowControl
     {
         public Settings Settings { get; }
-        public Form Form { get; }
+        public EventHandler<ImageChosenEventArgs> ImageChosen;
 
-        public SlideshowControl(Settings settings, Form form)
+        public SlideshowControl(Settings settings)
         {
             Settings = settings;
-            Form = form;
         }
 
-        public void Start()
+        public void Start(CancellationToken cancellationToken)
         {
             var directory = new DirectoryInfo(Settings.PictureFolder);
             var rand = new Random();
 
             FileInfo[] files = directory.GetFiles("*.jpg", SearchOption.AllDirectories);
 
-            var pictureBox = new PictureBox
-            {
-                Dock = DockStyle.Fill,
-                SizeMode = PictureBoxSizeMode.Zoom
-            };
-
-            Form.Controls.Add(pictureBox);
-            Form.Shown += (o, e) => Form.Activate();
-            Form.Show();
-
             foreach (var fileInfo in files.OrderBy(x => rand.Next()))
             {
-                pictureBox.Image = Image.FromFile(fileInfo.FullName);    
-                Form.BringToFront();
-                Thread.Sleep(TimeSpan.FromSeconds(Settings.MaximumDisplaySeconds));
-            }
+                FireImageChosen(Image.FromFile(fileInfo.FullName));
+                bool cancelled = cancellationToken.WaitHandle.WaitOne(TimeSpan.FromSeconds(Settings.MaximumDisplaySeconds));
 
-            Form.Close();
+                if (cancelled)
+                {
+                    return;
+                }
+            }
+        }
+
+        private void FireImageChosen(Image image)
+        {
+            ImageChosen?.Invoke(this, new ImageChosenEventArgs(image));
         }
     }
 }

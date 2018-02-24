@@ -102,5 +102,17 @@ namespace flashair_slideshow.Properties {
                 this["Recursive"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("1500")]
+        public int ClockIntervalMilliseconds {
+            get {
+                return ((int)(this["ClockIntervalMilliseconds"]));
+            }
+            set {
+                this["ClockIntervalMilliseconds"] = value;
+            }
+        }
     }
 }

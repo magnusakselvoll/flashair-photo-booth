@@ -14,53 +14,141 @@ namespace flashair_slideshow
         public Settings Settings { get; }
 
         private readonly HashSet<string> _extensions;
-        private readonly Random _random;
+        private readonly Random _random = new Random();
+        private DirectoryInfo _directory;
+        private List<FileInfo> _files;
+        private readonly Queue<FileInfo> _newFiles = new Queue<FileInfo>();
 
         public SlideshowControl(Settings settings)
         {
             Settings = settings;
+
             _extensions = GetExtensionsHashset();
-            _random = new Random();
         }
 
 
         public void Start(CancellationToken cancellationToken)
         {
-            var directory = new DirectoryInfo(Settings.PictureFolder);
+            _directory = new DirectoryInfo(Settings.PictureFolder);
+            RefreshFiles();
 
-            List<FileInfo> files = GetFiles(directory);
+            var watcher = new FileSystemWatcher(_directory.FullName)
+            {
+                IncludeSubdirectories = Settings.Recursive,
+                NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.DirectoryName
+            };
+
+            watcher.Deleted += FilesDeleted;
+            watcher.Renamed += FilesRenamed;
+            watcher.Created += FilesCreated;
+
+            watcher.EnableRaisingEvents = true;
 
             while (true)
             {
-                FileInfo fileInfo = GetRandomFile(files);
+                var newFile = _newFiles.Count > 0;
+                FileInfo fileInfo = newFile ? _newFiles.Dequeue() : GetRandomFile(_files);
+
                 Image image = ReadImage(fileInfo);
 
-                FireImageChosen(image);
-                bool cancelled = cancellationToken.WaitHandle.WaitOne(TimeSpan.FromSeconds(Settings.MaximumDisplaySeconds));
-
-                if (cancelled)
+                if (image == null)
                 {
-                    return;
+                    RefreshFiles(true);
+                    continue;
                 }
+
+                DateTime imageDisplayed = DateTime.Now;
+                FireImageChosen(image, fileInfo.Name);
+
+                if (newFile && _newFiles.Count == 0) //If last new file, refresh list of files
+                {
+                    RefreshFiles();
+                }
+
+                DateTime maxDisplayUntil = imageDisplayed.AddSeconds(Settings.MaximumDisplaySeconds);
+                DateTime minDisplayUntil = imageDisplayed.AddSeconds(Settings.MinimumDisplaySeconds);
+
+                while (maxDisplayUntil > DateTime.Now)
+                {
+                    if (_newFiles.Count > 0 && minDisplayUntil < DateTime.Now)
+                    {
+                        break;
+                    }
+
+                    int millisecondsToSleep = Math.Min(Settings.ClockIntervalMilliseconds,
+                        (int) Math.Ceiling((maxDisplayUntil - DateTime.Now).TotalMilliseconds));
+
+                    bool cancelled =
+                        cancellationToken.WaitHandle.WaitOne(millisecondsToSleep);
+
+                    if (cancelled)
+                    {
+                        return;
+                    }
+                }
+            }
+        }
+
+        private void FilesCreated(object sender, FileSystemEventArgs e)
+        {
+            string extension = Path.GetExtension(e.Name);
+
+            if (!_extensions.Contains(extension, StringComparer.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            _newFiles.Enqueue(new FileInfo(e.FullPath));
+        }
+
+        private void FilesRenamed(object sender, RenamedEventArgs e)
+        {
+            RefreshFiles();
+        }
+
+        private void FilesDeleted(object sender, FileSystemEventArgs e)
+        {
+            RefreshFiles();
+        }
+
+        DateTime _lastRefresh = DateTime.MinValue;
+
+        private void RefreshFiles(bool force = false)
+        {
+            if (force || _lastRefresh.AddMinutes(1) < DateTime.Now)
+            {
+                _lastRefresh = DateTime.Now;
+                _files = GetFiles(_directory);
             }
         }
 
         private static Image ReadImage(FileInfo fileInfo)
         {
-            var image = Image.FromFile(fileInfo.FullName);
-
-            foreach (var prop in image.PropertyItems)
+            
+            if (!fileInfo.Exists)
             {
-                if (prop.Id == 0x0112) //value of EXIF
-                {
-                    int orientationValue = prop.Value[0];
-                    RotateFlipType rotateFlipType = GetOrientationToFlipType(orientationValue);
-                    image.RotateFlip(rotateFlipType);
-                    break;
-                }
+                return null;
             }
 
-            return image;
+            Image clonedImage;
+
+            using (var image = new Bitmap(fileInfo.FullName))
+            {
+                foreach (var prop in image.PropertyItems)
+                {
+                    if (prop.Id == 0x0112)
+                    {
+                        int orientationValue = prop.Value[0];
+                        RotateFlipType rotateFlipType = GetOrientationToFlipType(orientationValue);
+                        image.RotateFlip(rotateFlipType);
+                        break;
+                    }
+                }
+
+                clonedImage = new Bitmap(image);
+            }
+
+            return clonedImage;
         }
 
         private static RotateFlipType GetOrientationToFlipType(int orientationValue)
@@ -117,7 +205,7 @@ namespace flashair_slideshow
 
         private List<FileInfo> GetFiles(DirectoryInfo directory)
         {
-            FileInfo[] allFiles = directory.GetFiles("*", SearchOption.AllDirectories);
+            FileInfo[] allFiles = directory.GetFiles("*", Settings.Recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly);
 
             List<FileInfo> files = allFiles.Where(x => _extensions.Contains(x.Extension, StringComparer.OrdinalIgnoreCase))
                 .ToList();
@@ -136,9 +224,9 @@ namespace flashair_slideshow
             return hashSet;
         }
 
-        private void FireImageChosen(Image image)
+        private void FireImageChosen(Image image, string fileName)
         {
-            ImageChosen?.Invoke(this, new ImageChosenEventArgs(image));
+            ImageChosen?.Invoke(this, new ImageChosenEventArgs(image, fileName));
         }
     }
 }

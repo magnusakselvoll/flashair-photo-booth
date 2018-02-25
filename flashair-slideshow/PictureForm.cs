@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Text;
 using System.IO;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -33,15 +35,53 @@ namespace flashair_slideshow
 
             Cursor.Hide();
 
+            StartSlideshow();
+        }
+
+        private void StartSlideshow()
+        {
             var control = new SlideshowControl(Settings.Default);
             control.ImageChosen += (o, ie) =>
             {
                 _pictureBox.Image = ie.Image;
                 _fileName = Path.GetFileNameWithoutExtension(ie.FileName);
             };
+            control.UnhandledExceptionThrown += SlideshowControlCrashed;
 
             CancellationTokenSource = new CancellationTokenSource();
             Task = Task.Factory.StartNew(() => control.Start(CancellationTokenSource.Token), CancellationTokenSource.Token);
+        }
+
+        private TimeSpan _lastRestartDelay = TimeSpan.FromSeconds(1);
+        private readonly TimeSpan _maxRestartDelay = TimeSpan.FromMinutes(5);
+
+        private void SlideshowControlCrashed(object sender, UnhandledExceptionEventArgs e)
+        {
+            using (EventLog eventLog = new EventLog("Application"))
+            {
+                eventLog.Source = "Application";
+                eventLog.WriteEntry($"flashair-slideshow: Unhandled exception thrown from slideshow control: {e.ExceptionObject}",
+                    EventLogEntryType.Error);
+            }
+
+            if (!e.IsTerminating)
+            {
+                return;
+            }
+
+            if (_lastRestartDelay < _maxRestartDelay)
+            {
+                _lastRestartDelay = _lastRestartDelay + _lastRestartDelay;
+
+                if (_lastRestartDelay > _maxRestartDelay)
+                {
+                    _lastRestartDelay = _maxRestartDelay;
+                }
+            }
+
+            Thread.Sleep(_lastRestartDelay);
+
+            StartSlideshow();
         }
 
         private void PictureForm_KeyDown(object sender, KeyEventArgs e)

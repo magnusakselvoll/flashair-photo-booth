@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Linq.Expressions;
+using System.Reflection;
 using System.Threading;
 using flashair_slideshow.Properties;
 
@@ -11,6 +14,7 @@ namespace flashair_slideshow
     internal sealed class SlideshowControl
     {
         public EventHandler<ImageChosenEventArgs> ImageChosen;
+        public EventHandler<UnhandledExceptionEventArgs> UnhandledExceptionThrown;
         public Settings Settings { get; }
 
         private readonly HashSet<string> _extensions;
@@ -29,63 +33,87 @@ namespace flashair_slideshow
 
         public void Start(CancellationToken cancellationToken)
         {
-            _directory = new DirectoryInfo(Settings.PictureFolder);
-            RefreshFiles();
-
-            var watcher = new FileSystemWatcher(_directory.FullName)
+            try
             {
-                IncludeSubdirectories = Settings.Recursive,
-                NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.DirectoryName
-            };
+                _directory = new DirectoryInfo(Settings.PictureFolder);
+                RefreshFiles();
 
-            watcher.Deleted += FilesDeleted;
-            watcher.Renamed += FilesRenamed;
-            watcher.Created += FilesCreated;
-
-            watcher.EnableRaisingEvents = true;
-
-            while (true)
-            {
-                var newFile = _newFiles.Count > 0;
-                FileInfo fileInfo = newFile ? _newFiles.Dequeue() : GetRandomFile(_files);
-
-                Image image = ReadImage(fileInfo);
-
-                if (image == null)
+                var watcher = new FileSystemWatcher(_directory.FullName)
                 {
-                    RefreshFiles(true);
-                    continue;
-                }
+                    IncludeSubdirectories = Settings.Recursive,
+                    NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.DirectoryName
+                };
 
-                DateTime imageDisplayed = DateTime.Now;
-                FireImageChosen(image, fileInfo.Name);
+                watcher.Deleted += FilesDeleted;
+                watcher.Renamed += FilesRenamed;
+                watcher.Created += FilesCreated;
 
-                if (newFile && _newFiles.Count == 0) //If last new file, refresh list of files
+                watcher.EnableRaisingEvents = true;
+
+                while (true)
                 {
-                    RefreshFiles();
-                }
+                    var newFile = _newFiles.Count > 0;
+                    FileInfo fileInfo = newFile ? _newFiles.Dequeue() : GetRandomFile(_files);
 
-                DateTime maxDisplayUntil = imageDisplayed.AddSeconds(Settings.MaximumDisplaySeconds);
-                DateTime minDisplayUntil = imageDisplayed.AddSeconds(Settings.MinimumDisplaySeconds);
-
-                while (maxDisplayUntil > DateTime.Now)
-                {
-                    if (_newFiles.Count > 0 && minDisplayUntil < DateTime.Now)
+                    Image image;
+                    try
                     {
-                        break;
+                        image = ReadImage(fileInfo);
+                    }
+                    catch (Exception e)
+                    {
+                        using (EventLog eventLog = new EventLog("Application"))
+                        {
+                            eventLog.Source = "Application";
+                            eventLog.WriteEntry($"flashair -slideshow: Unable to parse file '{fileInfo.FullName}' as image. Exception: {e}",
+                                EventLogEntryType.Warning);
+                        }
+
+                        image = null; //Continuing to next image
                     }
 
-                    int millisecondsToSleep = Math.Min(Settings.ClockIntervalMilliseconds,
-                        (int) Math.Ceiling((maxDisplayUntil - DateTime.Now).TotalMilliseconds));
-
-                    bool cancelled =
-                        cancellationToken.WaitHandle.WaitOne(millisecondsToSleep);
-
-                    if (cancelled)
+                    if (image == null)
                     {
-                        return;
+                        RefreshFiles(true);
+                        continue;
+                    }
+
+                    DateTime imageDisplayed = DateTime.Now;
+                    FireImageChosen(image, fileInfo.Name);
+
+                    if (newFile && _newFiles.Count == 0) //If last new file, refresh list of files
+                    {
+                        RefreshFiles();
+                    }
+
+                    DateTime maxDisplayUntil = imageDisplayed.AddSeconds(Settings.MaximumDisplaySeconds);
+                    DateTime minDisplayUntil = imageDisplayed.AddSeconds(Settings.MinimumDisplaySeconds);
+
+                    while (maxDisplayUntil > DateTime.Now)
+                    {
+                        if (_newFiles.Count > 0 && minDisplayUntil < DateTime.Now)
+                        {
+                            break;
+                        }
+
+                        int millisecondsToSleep = Math.Min(Settings.ClockIntervalMilliseconds,
+                            (int) Math.Ceiling((maxDisplayUntil - DateTime.Now).TotalMilliseconds));
+
+                        bool cancelled =
+                            cancellationToken.WaitHandle.WaitOne(millisecondsToSleep);
+
+                        if (cancelled)
+                        {
+                            return;
+                        }
                     }
                 }
+            }
+            catch (Exception e)
+            {
+                UnhandledExceptionThrown?.Invoke(this, new UnhandledExceptionEventArgs(e, true));
+
+                throw;
             }
         }
 

@@ -3,6 +3,12 @@ param(
     [String]$Source,
     [Parameter(Mandatory=$true)]
     [String]$Destination,
+    [Parameter(Mandatory=$true)]
+    [String]$PublishDirectory,
+    [Parameter(Mandatory=$false)]
+    [String]$PublishNamePattern = '{0}',
+    [Parameter(Mandatory=$false)]
+    [String]$CompleteNamePattern = '{0}.complete',
     [Parameter(Mandatory=$false)]
     [String]$Filter = '*.jpg',
     [Parameter(Mandatory=$false)]
@@ -18,6 +24,7 @@ $secondsToSleep = $([int]($RefreshInterval.TotalSeconds))
 $iteration = 0
 $completedFiles = @{}
 [System.Collections.Queue]$filesToDelete = @()
+$publishedFileCounter = 0
 
 while ($stopwatch.Elapsed -lt $MaximumExecutionTime)
 {
@@ -30,13 +37,35 @@ while ($stopwatch.Elapsed -lt $MaximumExecutionTime)
     {
         if ($completedFiles[$remoteFile.Name])
         {
-            Write-Warning "File '$($remoteFile.Name)' already downloaded. Skipping."
+            Write-Verbose "File '$($remoteFile.Name)' already downloaded. Skipping."
+            continue
+        }
+
+        $tokenFilePath = "$Destination\$CompleteNamePattern" -f $remoteFile.Name
+        if (Test-Path($tokenFilePath))
+        {
+            Write-Warning "File '$($remoteFile.Name)' already downloaded in previous session. Skipping."
+            $completedFiles[$remoteFile.Name] = $true
             continue
         }
 
         Write-Host "Downloading file '$($remoteFile.Name)'"
 
         $remoteFile | Copy-Item -Destination $Destination
+        $copiedFile = Get-Item "$Destination\$($remoteFile.Name)"
+        
+        while (Test-Path("$PublishDirectory\$PublishNamePattern" -f "$publishedFileCounter$($copiedFile.Extension)"))
+        {
+            $publishedFileCounter++;
+        }
+
+        $publishPath = "$PublishDirectory\$PublishNamePattern" -f "$publishedFileCounter$($copiedFile.Extension)"
+        Write-Verbose "Moving file to $publishPath"
+
+        $copiedFile | Move-Item -Destination $publishPath
+        New-Item $tokenFilePath | Write-Verbose
+        Write-Verbose "Created token file at $tokenFilePath"
+        
 
         if ($DeleteFromSource)
         {            
@@ -44,6 +73,7 @@ while ($stopwatch.Elapsed -lt $MaximumExecutionTime)
         }
 
         $completedFiles[$remoteFile.Name] = $true
+        $publishedFileCounter++
     }
 
     if ($DeleteFromSource)
@@ -57,22 +87,7 @@ while ($stopwatch.Elapsed -lt $MaximumExecutionTime)
                 Write-Warning "Unable to delete '$sourceFilePath'. File does not exist."
                 continue
             }
-            $destinationFilePath = Join-Path $Destination $fileName
-            if (-not (Test-Path $destinationFilePath))
-            {
-                Write-Warning "Won't delete '$sourceFilePath'. File does not exist on destination."
-                continue
-            }
-            $sourceFile = Get-Item $sourceFilePath
-            $destinationFile = Get-Item $destinationFilePath
-
-            if ($sourceFile.Length -ne $destinationFile.Length)
-            {
-                Write-Warning "'$sourceFilePath' and '$destinationFilePath' have different length. Repeating copy."
-                $completedFiles.Remove($fileName)
-                continue
-            }
-            $sourceFile.Delete()
+            Remove-Item $sourceFilePath
             Write-Host "Deleted file '$sourceFilePath'"
         }
     }

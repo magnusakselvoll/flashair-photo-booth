@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Drawing;
-using System.Drawing.Drawing2D;
 using System.Drawing.Text;
 using System.IO;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -40,20 +38,21 @@ namespace flashair_slideshow
 
         private void StartSlideshow()
         {
-            var control = new SlideshowControl(Settings.Default);
-            control.ImageChosen += (o, ie) =>
+            _slideshowControl = new SlideshowControl(Settings.Default);
+            _slideshowControl.ImageChosen += (o, ie) =>
             {
                 _pictureBox.Image = ie.Image;
                 _fileName = Path.GetFileNameWithoutExtension(ie.FileName);
             };
-            control.UnhandledExceptionThrown += SlideshowControlCrashed;
+            _slideshowControl.UnhandledExceptionThrown += SlideshowControlCrashed;
 
             CancellationTokenSource = new CancellationTokenSource();
-            Task = Task.Factory.StartNew(() => control.Start(CancellationTokenSource.Token), CancellationTokenSource.Token);
+            Task = Task.Factory.StartNew(() => _slideshowControl.Start(CancellationTokenSource.Token), CancellationTokenSource.Token);
         }
 
         private TimeSpan _lastRestartDelay = TimeSpan.FromSeconds(1);
         private readonly TimeSpan _maxRestartDelay = TimeSpan.FromMinutes(5);
+        private SlideshowControl _slideshowControl;
 
         private void SlideshowControlCrashed(object sender, UnhandledExceptionEventArgs e)
         {
@@ -86,9 +85,17 @@ namespace flashair_slideshow
 
         private void PictureForm_KeyDown(object sender, KeyEventArgs e)
         {
-            if (e.KeyCode == Keys.Escape)
+            switch (e.KeyCode)
             {
-                Close();
+                case Keys.Escape:
+                    Close();
+                    break;
+                case Keys.Left:
+                    _slideshowControl?.GoPrevious();
+                    break;
+                case Keys.Right:
+                    _slideshowControl?.GoNext();
+                    break;
             }
         }
 
@@ -103,6 +110,7 @@ namespace flashair_slideshow
 
             Task = null;
             CancellationTokenSource = null;
+            _slideshowControl = null;
 
             Cursor.Show();
         }

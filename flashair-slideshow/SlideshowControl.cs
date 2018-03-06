@@ -9,11 +9,19 @@ using flashair_slideshow.Properties;
 
 namespace flashair_slideshow
 {
+    internal enum InterruptReason
+    {
+        None,
+        GoPrevious,
+        GoNext
+    }
     internal sealed class SlideshowControl
     {
         public EventHandler<ImageChosenEventArgs> ImageChosen;
         public EventHandler<UnhandledExceptionEventArgs> UnhandledExceptionThrown;
         public Settings Settings { get; }
+        private CancellationTokenSource InternalCancellationTokenSource { get; set; }
+        private InterruptReason InterruptType { get; set; }
 
         private readonly HashSet<string> _extensions;
         private readonly Random _random = new Random();
@@ -28,9 +36,45 @@ namespace flashair_slideshow
             _extensions = GetExtensionsHashset();
         }
 
-
-        public void Start(CancellationToken cancellationToken)
+        private void Interrupt(InterruptReason reason)
         {
+            if (InternalCancellationTokenSource == null)
+            {
+                return;
+            }
+
+            lock (this)
+            {
+                InterruptType = reason;
+            }
+
+            InternalCancellationTokenSource.Cancel();
+        }
+
+        private InterruptReason HandleInterrupt()
+        {
+            lock (this)
+            {
+                var reason = InterruptType;
+                InterruptType = InterruptReason.None;
+                return reason;
+            }
+        }
+
+        public void GoNext()
+        {
+            Interrupt(InterruptReason.GoNext);
+        }
+
+        public void GoPrevious()
+        {
+            Interrupt(InterruptReason.GoPrevious);
+        }
+
+        public void Start(CancellationToken externalCancellationToken)
+        {
+            CancellationToken cancellationToken = ResetCancellationToken(externalCancellationToken);
+
             try
             {
                 _directory = new DirectoryInfo(Settings.PictureFolder);
@@ -102,7 +146,26 @@ namespace flashair_slideshow
 
                         if (cancelled)
                         {
-                            return;
+                            InterruptReason internalInterrupt = HandleInterrupt();
+
+                            try
+                            {
+                                switch (internalInterrupt)
+                                {
+                                    case InterruptReason.None: //The cancellation is external
+                                        return;
+                                    case InterruptReason.GoPrevious:
+                                        continue;
+                                    case InterruptReason.GoNext:
+                                        continue;
+                                    default:
+                                        throw new ArgumentOutOfRangeException();
+                                }
+                            }
+                            finally
+                            {
+                                cancellationToken = ResetCancellationToken(externalCancellationToken);
+                            }
                         }
                     }
                 }
@@ -113,6 +176,17 @@ namespace flashair_slideshow
 
                 throw;
             }
+        }
+
+        private CancellationToken ResetCancellationToken(CancellationToken externalCancellationToken)
+        {
+            InternalCancellationTokenSource = new CancellationTokenSource();
+            var linkedCancellationSource =
+                CancellationTokenSource.CreateLinkedTokenSource(externalCancellationToken,
+                    InternalCancellationTokenSource.Token);
+
+            var cancellationToken = linkedCancellationSource.Token;
+            return cancellationToken;
         }
 
         private void FilesCreated(object sender, FileSystemEventArgs e)

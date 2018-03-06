@@ -77,6 +77,8 @@ namespace flashair_slideshow
 
             try
             {
+                var history = new HistoryQueue<FileInfo>(1000);
+
                 _directory = new DirectoryInfo(Settings.PictureFolder);
                 RefreshFiles();
 
@@ -96,6 +98,7 @@ namespace flashair_slideshow
                 {
                     var newFile = _newFiles.Count > 0;
                     FileInfo fileInfo = newFile ? _newFiles.Dequeue() : GetRandomFile(_files);
+                    history.Enqueue(fileInfo);
 
                     Image image;
                     try
@@ -130,8 +133,8 @@ namespace flashair_slideshow
 
                     DateTime maxDisplayUntil = imageDisplayed.AddSeconds(Settings.MaximumDisplaySeconds);
                     DateTime minDisplayUntil = imageDisplayed.AddSeconds(Settings.MinimumDisplaySeconds);
-
-                    while (maxDisplayUntil > DateTime.Now)
+                    bool interrupted = false;
+                    while (!interrupted  && maxDisplayUntil > DateTime.Now)
                     {
                         if (_newFiles.Count > 0 && minDisplayUntil < DateTime.Now)
                         {
@@ -147,25 +150,21 @@ namespace flashair_slideshow
                         if (cancelled)
                         {
                             InterruptReason internalInterrupt = HandleInterrupt();
+                            switch (internalInterrupt)
+                            {
+                                case InterruptReason.None: //The cancellation is external
+                                    return;
+                                case InterruptReason.GoPrevious:
+                                    interrupted = true;
+                                    break;
+                                case InterruptReason.GoNext:
+                                    interrupted = true;
+                                    break;
+                                default:
+                                    throw new ArgumentOutOfRangeException();
+                            }
 
-                            try
-                            {
-                                switch (internalInterrupt)
-                                {
-                                    case InterruptReason.None: //The cancellation is external
-                                        return;
-                                    case InterruptReason.GoPrevious:
-                                        continue;
-                                    case InterruptReason.GoNext:
-                                        continue;
-                                    default:
-                                        throw new ArgumentOutOfRangeException();
-                                }
-                            }
-                            finally
-                            {
-                                cancellationToken = ResetCancellationToken(externalCancellationToken);
-                            }
+                            cancellationToken = ResetCancellationToken(externalCancellationToken);
                         }
                     }
                 }

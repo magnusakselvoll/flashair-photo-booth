@@ -29,6 +29,7 @@ namespace flashair_slideshow
         private List<FileInfo> _files;
         private readonly Queue<FileInfo> _newFiles = new Queue<FileInfo>();
 
+
         public SlideshowControl(Settings settings)
         {
             Settings = settings;
@@ -78,6 +79,8 @@ namespace flashair_slideshow
             try
             {
                 var history = new HistoryQueue<FileInfo>(1000);
+                int? behindInHistory = null;
+                bool userNavigated = false;
 
                 _directory = new DirectoryInfo(Settings.PictureFolder);
                 RefreshFiles();
@@ -96,9 +99,39 @@ namespace flashair_slideshow
 
                 while (true)
                 {
-                    var newFile = _newFiles.Count > 0;
-                    FileInfo fileInfo = newFile ? _newFiles.Dequeue() : GetRandomFile(_files);
-                    history.Enqueue(fileInfo);
+
+                    FileInfo fileInfo;
+                    bool newFile = false;
+
+                    if (behindInHistory.HasValue)
+                    {
+                        if (behindInHistory.Value >= history.Count)
+                        {
+                            behindInHistory = history.Count - 1;
+                        }
+
+                        if (!userNavigated)
+                        {
+                            if (--behindInHistory < 0)
+                            {
+                                behindInHistory = 0;
+                            }
+                        }
+
+                        fileInfo = history[history.Count - 1 - behindInHistory.Value];
+
+                        if (behindInHistory.Value == 0)
+                        {
+                            behindInHistory = null;
+                        }
+                    }
+
+                    else
+                    {
+                        newFile = _newFiles.Count > 0;
+                        fileInfo = newFile ? _newFiles.Dequeue() : GetRandomFile(_files);
+                        history.Enqueue(fileInfo);
+                    }
 
                     Image image;
                     try
@@ -147,6 +180,8 @@ namespace flashair_slideshow
                         bool cancelled =
                             cancellationToken.WaitHandle.WaitOne(millisecondsToSleep);
 
+                        userNavigated = false;
+
                         if (cancelled)
                         {
                             InterruptReason internalInterrupt = HandleInterrupt();
@@ -155,9 +190,24 @@ namespace flashair_slideshow
                                 case InterruptReason.None: //The cancellation is external
                                     return;
                                 case InterruptReason.GoPrevious:
+                                    if (!behindInHistory.HasValue)
+                                    {
+                                        behindInHistory = 0;
+                                    }
+                                    behindInHistory++;
+                                    userNavigated = true;
                                     interrupted = true;
                                     break;
                                 case InterruptReason.GoNext:
+                                    if (behindInHistory.HasValue)
+                                    {
+                                        if (--behindInHistory < 0)
+                                        {
+                                            behindInHistory = 0;
+                                        }
+                                        userNavigated = true;
+                                    }
+
                                     interrupted = true;
                                     break;
                                 default:

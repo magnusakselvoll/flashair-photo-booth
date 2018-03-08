@@ -84,6 +84,10 @@ namespace flashair_slideshow
 
             try
             {
+                NativeMethods.SetThreadExecutionState(NativeMethods.ES_CONTINUOUS |
+                                                      NativeMethods.ES_DISPLAY_REQUIRED |
+                                                      NativeMethods.ES_SYSTEM_REQUIRED);
+
                 var history = new HistoryQueue<FileInfo>(1000);
                 int? behindInHistory = null;
                 bool userNavigated = false;
@@ -149,7 +153,8 @@ namespace flashair_slideshow
                         using (EventLog eventLog = new EventLog("Application"))
                         {
                             eventLog.Source = "Application";
-                            eventLog.WriteEntry($"flashair -slideshow: Unable to parse file '{fileInfo.FullName}' as image. Exception: {e}",
+                            eventLog.WriteEntry(
+                                $"flashair -slideshow: Unable to parse file '{fileInfo.FullName}' as image. Exception: {e}",
                                 EventLogEntryType.Warning);
                         }
 
@@ -201,6 +206,7 @@ namespace flashair_slideshow
                                     {
                                         behindInHistory = 0;
                                     }
+
                                     behindInHistory++;
                                     userNavigated = true;
                                     interrupted = true;
@@ -212,6 +218,7 @@ namespace flashair_slideshow
                                         {
                                             behindInHistory = 0;
                                         }
+
                                         userNavigated = true;
                                     }
 
@@ -234,6 +241,10 @@ namespace flashair_slideshow
                 UnhandledExceptionThrown?.Invoke(this, new UnhandledExceptionEventArgs(e, true));
 
                 throw;
+            }
+            finally
+            {
+                NativeMethods.SetThreadExecutionState(NativeMethods.ES_NONE);
             }
         }
 

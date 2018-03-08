@@ -13,7 +13,8 @@ namespace flashair_slideshow
     {
         None,
         GoPrevious,
-        GoNext
+        GoNext,
+        PausePlay
     }
     internal sealed class SlideshowControl
     {
@@ -70,6 +71,11 @@ namespace flashair_slideshow
         public void GoPrevious()
         {
             Interrupt(InterruptReason.GoPrevious);
+        }
+
+        public void PausePlay()
+        {
+            Interrupt(InterruptReason.PausePlay);
         }
 
         public void Start(CancellationToken externalCancellationToken)
@@ -167,7 +173,8 @@ namespace flashair_slideshow
                     DateTime maxDisplayUntil = imageDisplayed.AddSeconds(Settings.MaximumDisplaySeconds);
                     DateTime minDisplayUntil = imageDisplayed.AddSeconds(Settings.MinimumDisplaySeconds);
                     bool interrupted = false;
-                    while (!interrupted  && maxDisplayUntil > DateTime.Now)
+                    bool paused = false;
+                    while (!interrupted && (maxDisplayUntil > DateTime.Now || paused))
                     {
                         if (_newFiles.Count > 0 && minDisplayUntil < DateTime.Now)
                         {
@@ -209,6 +216,9 @@ namespace flashair_slideshow
                                     }
 
                                     interrupted = true;
+                                    break;
+                                case InterruptReason.PausePlay:
+                                    paused = !paused;
                                     break;
                                 default:
                                     throw new ArgumentOutOfRangeException();

@@ -96,6 +96,9 @@ namespace flashair_slideshow
                 case Keys.Right:
                     _slideshowControl?.GoNext();
                     break;
+                case Keys.Space:
+                    _slideshowControl?.PausePlay();
+                    break;
             }
         }
 

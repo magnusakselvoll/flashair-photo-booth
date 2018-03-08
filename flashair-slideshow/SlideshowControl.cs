@@ -82,9 +82,11 @@ namespace flashair_slideshow
         {
             CancellationToken cancellationToken = ResetCancellationToken(externalCancellationToken);
 
+            uint previousExecutionState = 0;
+
             try
             {
-                NativeMethods.SetThreadExecutionState(NativeMethods.ES_CONTINUOUS |
+                previousExecutionState = NativeMethods.SetThreadExecutionState(NativeMethods.ES_CONTINUOUS |
                                                       NativeMethods.ES_DISPLAY_REQUIRED |
                                                       NativeMethods.ES_SYSTEM_REQUIRED);
 
@@ -244,7 +246,7 @@ namespace flashair_slideshow
             }
             finally
             {
-                NativeMethods.SetThreadExecutionState(NativeMethods.ES_NONE);
+                NativeMethods.SetThreadExecutionState(previousExecutionState);
             }
         }
 

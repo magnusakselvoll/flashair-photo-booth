@@ -8,6 +8,8 @@ param(
     [Parameter(Mandatory=$false)]
     [String]$PublishNamePattern = '{0}',
     [Parameter(Mandatory=$false)]
+    [int]$PublishFilesPerSubfolder = 100,
+    [Parameter(Mandatory=$false)]
     [String]$CompleteNamePattern = '{0}.complete',
     [Parameter(Mandatory=$false)]
     [String]$Filter = '*.jpg',
@@ -26,6 +28,30 @@ $completedFiles = @{}
 [System.Collections.Queue]$filesToDelete = @()
 $publishedFileCounter = 0
 
+function Get-PublishFolder ([String] $baseFolder, [int] $filesPerSubfolder, [int] $fileNumber) {
+    if (-not (Test-Path($baseFolder)))
+    {
+        New-Item -Path $baseFolder -ItemType Directory > $null
+    }
+
+    if ($filesPerSubfolder -le 0)
+    {
+        return $baseFolder
+    }
+
+    $folderNumber = [int] [Math]::Floor($fileNumber / $filesPerSubfolder)
+    $folderName = "$($folderNumber * $filesPerSubfolder)-$((($folderNumber+1) * $filesPerSubfolder) - 1)"
+
+    $publishFolder = "$baseFolder\$folderName"
+
+    if (-not (Test-Path($publishFolder)))
+    {
+        New-Item -Path $publishFolder -ItemType Directory > $null
+    }
+
+    return $publishFolder
+}
+ 
 while ($stopwatch.Elapsed -lt $MaximumExecutionTime)
 {
     $iteration++
@@ -54,12 +80,15 @@ while ($stopwatch.Elapsed -lt $MaximumExecutionTime)
         $remoteFile | Copy-Item -Destination $Destination
         $copiedFile = Get-Item "$Destination\$($remoteFile.Name)"
         
-        while (Test-Path("$PublishDirectory\$PublishNamePattern" -f "$publishedFileCounter$($copiedFile.Extension)"))
+        $publishFolder = Get-PublishFolder $PublishDirectory $PublishFilesPerSubfolder $publishedFileCounter
+
+        while (Test-Path("$publishFolder\$PublishNamePattern" -f "$publishedFileCounter$($copiedFile.Extension)"))
         {
             $publishedFileCounter++;
+            $publishFolder = Get-PublishFolder $PublishDirectory $PublishFilesPerSubfolder $publishedFileCounter
         }
 
-        $publishPath = "$PublishDirectory\$PublishNamePattern" -f "$publishedFileCounter$($copiedFile.Extension)"
+        $publishPath = "$publishFolder\$PublishNamePattern" -f "$publishedFileCounter$($copiedFile.Extension)"
         Write-Verbose "Moving file to $publishPath"
 
         $copiedFile | Move-Item -Destination $publishPath

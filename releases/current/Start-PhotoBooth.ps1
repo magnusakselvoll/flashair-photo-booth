@@ -32,9 +32,7 @@ param(
 
 $verbose = ($VerbosePreference -eq "Continue")
 
-Start-Process -FilePath 'powershell.exe' -ArgumentList ".\wifi-utilities\Connect-WifiAuto.ps1 -InterfaceName `"$FlashAirInterface`" -ProfileName `"$FlashAirProfile`" -MaximumExecutionTime $MaximumExecutionTime -Verbose:`$$verbose" -Verb Open
-Start-Process -FilePath 'powershell.exe' -ArgumentList ".\wifi-utilities\Connect-WifiAuto.ps1 -InterfaceName `"$InternetInterface`" -ProfileName `"$InternetProfile`" -MaximumExecutionTime $MaximumExecutionTime -Verbose:`$$verbose" -Verb Open
+Start-Process -FilePath 'powershell.exe' -ArgumentList ".\wifi-utilities\Connect-WifiAuto.ps1 -InterfaceName `"$FlashAirInterface`" -ProfileName `"$FlashAirProfile`" -Verbose:`$$verbose" -Verb Open
+Start-Process -FilePath 'powershell.exe' -ArgumentList ".\wifi-utilities\Connect-WifiAuto.ps1 -InterfaceName `"$InternetInterface`" -ProfileName `"$InternetProfile`" -Verbose:`$$verbose" -Verb Open
 Start-Process -FilePath 'flashair-slideshow.exe' -WorkingDirectory ".\flashair-slideshow" -Verb Open
 . .\flashair-downloader\Start-FlashAirDownloader.ps1 -Source $Source -Destination $Destination -PublishDirectory $PublishDirectory -PublishNamePattern $PublishNamePattern -PublishFilesPerSubfolder $PublishFilesPerSubfolder -CompleteNamePattern $CompleteNamePattern -Filter $Filter -RefreshInterval $RefreshInterval -MaximumExecutionTime $MaximumExecutionTime -DeleteFromSource:$DeleteFromSource -Verbose:$verbose
-
-#Start-Process -FilePath 'powershell.exe' -ArgumentList ".\flashair-downloader\Start-FlashAirDownloader.ps1 -Source `"$Source`" -Destination `"$Destination`" -PublishDirectory `"$PublishDirectory`" -Verbose:`$$verbose" -NoNewWindow

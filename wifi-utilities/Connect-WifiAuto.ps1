@@ -2,7 +2,7 @@ param(
     [Parameter(Mandatory=$true)]
     [String]$InterfaceName,
     [Parameter(Mandatory=$true)]
-    [String]$WifiProfile,
+    [String]$ProfileName,
     [Parameter(Mandatory=$false)]
     [timespan]$RefreshInterval = (New-TimeSpan -Seconds 30),
     [Parameter(Mandatory=$false)]
@@ -18,7 +18,7 @@ function Invoke-NetShellWlan
     return $result
 }
 
-Write-Host "Attempting to maintain connection to profile $WifiProfile on interface $InterfaceName every $RefreshInterval";
+Write-Host "Attempting to maintain connection to profile $ProfileName on interface $InterfaceName every $RefreshInterval";
 
 $stopwatch =  [system.diagnostics.stopwatch]::StartNew()
 $secondsToSleep = $([int]($RefreshInterval.TotalSeconds))
@@ -58,18 +58,23 @@ while ($stopwatch.Elapsed -lt $MaximumExecutionTime)
             continue
         }
 
-        if ($key -eq 'State' -and $value -eq 'connected')
+        if ($key -eq 'State')
         {
-            $connected = $true
+            $connected = $value -eq 'connected'
             break;
         }
+    }
+
+    if (-not $interfaceDetected)
+    {
+        Write-Warning "Interface $InterfaceName not detected"
     }
 
     Write-Host "Interface $InterfaceName connected: $connected"
 
     if (-not $connected)
     {
-        Invoke-NetShellWlan "connect", "name=$WifiProfile", "interface=$InterfaceName" | Write-Verbose
+        Invoke-NetShellWlan "connect", "name=$ProfileName", "interface=$InterfaceName" | Write-Verbose
         Write-Host 'Attempted reconnection'
         $reconnects++
     }

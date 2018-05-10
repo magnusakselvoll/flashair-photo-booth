@@ -22,6 +22,9 @@ Write-Host "Attempting to maintain connection to profile $ProfileName on interfa
 
 $stopwatch =  [system.diagnostics.stopwatch]::StartNew()
 $secondsToSleep = $([int]($RefreshInterval.TotalSeconds))
+
+Write-Verbose "Each iteration will sleep for $secondsToSleep s."
+
 $iteration = 0
 $reconnects = 0
 
@@ -58,11 +61,16 @@ while ($stopwatch.Elapsed -lt $MaximumExecutionTime)
             continue
         }
 
-        if ($key -eq 'State' -and $value -eq 'connected')
+        if ($key -eq 'State')
         {
-            $connected = $true
+            $connected = $value -eq 'connected'
             break;
         }
+    }
+
+    if (-not $interfaceDetected)
+    {
+        Write-Warning "Interface $InterfaceName not detected"
     }
 
     Write-Host "Interface $InterfaceName connected: $connected"

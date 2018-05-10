@@ -22,6 +22,9 @@ Write-Host "Attempting to maintain connection to profile $ProfileName on interfa
 
 $stopwatch =  [system.diagnostics.stopwatch]::StartNew()
 $secondsToSleep = $([int]($RefreshInterval.TotalSeconds))
+
+Write-Verbose "Each iteration will sleep for $secondsToSleep s."
+
 $iteration = 0
 $reconnects = 0
 

@@ -9,6 +9,8 @@ param(
     [timespan]$MaximumExecutionTime = (New-TimeSpan -Hours 24)
 )
 
+Write-Verbose "Interface: $InterfaceName, Profile: $ProfileName, Refresh: $RefreshInterval, MaxExec: $MaximumExecutionTime"
+
 function Invoke-NetShellWlan
 {
     param([string[]] $Params)

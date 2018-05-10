@@ -14,7 +14,7 @@ param(
     [Parameter(Mandatory=$false)]
     [String]$Filter = '*.jpg',
     [Parameter(Mandatory=$false)]
-    [timespan]$RefreshInterval = (New-TimeSpan -Seconds 10),
+    [timespan]$RefreshInterval = (New-TimeSpan -Seconds 5),
     [Parameter(Mandatory=$false)]
     [timespan]$MaximumExecutionTime = (New-TimeSpan -Hours 24),
     [Parameter(Mandatory=$false)]
